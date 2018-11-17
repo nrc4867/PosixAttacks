@@ -3,8 +3,11 @@
 /// Author: Nicholas Chieppa <nrc4867>
 ///
 
+#define _DEFAULT_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include <ncurses.h>
 #include <pthreads.h>
@@ -14,6 +17,7 @@ typedef struct CITY {
     size_t highest; /// the highest hit in the city
     size_t lowest; /// the lowest point in the city
     unsigned int hits; /// the amount of missles that hit
+    unsigned char* 
 } * City;
 
 typedef struct PLATFORM {
@@ -31,17 +35,65 @@ typedef struct MISSLE {
 static int attack = 1; /// indicate if the attack is still continuing
 static long missles = 0; /// amount of missles that remain (if < 0: infinite)
 
-static size_t screenWidth = 0; /// width of the screen determined by ncurses
-static size_t screenHeight = 0; /// height of the screen determined by ncurses
+static size_t width = 0; /// width of the screen determined by ncurses
+static size_t height = 0; /// height of the screen determined by ncurses
+
+static City city = NULL; /// basic city statitics 
 
 /**
- * creates a city in ncurses
- * see city.h for more details
+ * is_digit()
+ *      checks to ensure that a c string is a base 10 digit
+ * args - 
+ *      string - a string to check
+ * returns - 
+ *      1 - if string is a digit, 0 otherwise
+ */
+unsigned int is_digit(char* string) {
+    for(int i = 0; string[i] != '\0'; i++) {
+        if((string[i] >= '0' || string[i] <= '9'))
+            return 0;
+    }
+    return 1;
+}
+
+/**
+ * init_city()
+ *      creates a city as described in city.h
+ * pre - 
+ *      see city.h
+ * returns - 
+ *      see city.h
+ * post -
+ *      see city.h 
+ *      city global variable created and set by function
  */
 unsigned int init_city(FILE *city, size_t, screenWidth, size_t screenHeight) {
     assert(city != NULL);
     assert(screenWidth > 0 && screenHeight > 0);
+
+    width = screenWidth;
+    height = screenHeight;
+
+    city = malloc(sizeof(struct CITY));
+    assert(city != NULL);
+
+    
+
     return 1;
+}
+
+/**
+ * destroy_city()
+ *      frees memory allocated by init_city().
+ * pre - 
+ *      see city.h for details
+ * post - 
+ *      city global variable is set to NULL
+ */
+void destroy_city() {
+    if(city != NULL)
+        free(city);
+    city = NULL;
 }
 
 /**
@@ -82,10 +134,12 @@ static void destroy_missle(Missle missle) {
  *      NULL
  */
 static void *missle_t(void) {
+
     return NULL;
 }
 
 void *attack_t(void) {
+    assert(city != NULL);
     // spawn random amount of missles 
     // wait for them to fall with thread_join
     // cleanup missles
@@ -94,6 +148,8 @@ void *attack_t(void) {
 }
 
 void *defense_t(void) {
+    assert(city != NULL);
+
     return NULL;
 }
 
