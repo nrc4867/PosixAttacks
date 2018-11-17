@@ -5,16 +5,16 @@
 
 #include <stdio.h>
 
-#ifndef CITY
-#define CITY
+#ifndef CITY_H
+#define CITY_H
 
 /// objects to drawn on screen in ncurses
-#define WALL '|' /// the wall of a building
-#define FLOOR '_' /// the ground or top of building
-#define MISSLE '|' /// the missle that falls from the sky
-#define EXPLODED '?' /// indicator for missle position before explosion
-#define HIT '*' /// the explosion indicator
-#define PLATFORM '#' /// the 'sheild' platfrom the player controls
+#define WALL_C '|' /// wall of a building
+#define FLOOR_C '_' /// ground or top of building
+#define MISSLE_C '|' /// missle that falls from the sky
+#define EXPLODED_C '?' /// indicator for missle position before explosion
+#define HIT_C '*' /// explosion indicator
+#define SHEILD_C '#' /// sheild platfrom the player controls
 
 #define PLATFORM_SIZE 5 /// the size of the player sheild that is drawn
 
