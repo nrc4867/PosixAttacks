@@ -54,6 +54,14 @@
 unsigned int init_city(FILE *city, size_t screenWidth, size_t screenHeight);
 
 /**
+ * destroy_city()
+ *      free any memory created by init_city()
+ * pre -
+ *      init_city() has been called
+ */
+void destroy_city();
+
+/**
  * attack_t()
  *      start the attack. Each interation of the loop will create
  *      a random amount of missles until the missle count is 0 or the
