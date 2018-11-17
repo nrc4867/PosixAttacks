@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <ncurses.h>
 #include <pthreads.h>
 #include "city.h"
@@ -38,7 +39,9 @@ static size_t screenHeight = 0; /// height of the screen determined by ncurses
  * see city.h for more details
  */
 unsigned int init_city(FILE *city, size_t, screenWidth, size_t screenHeight) {
-
+    assert(city != NULL);
+    assert(screenWidth > 0 && screenHeight > 0);
+    return 1;
 }
 
 /**
@@ -51,7 +54,7 @@ unsigned int init_city(FILE *city, size_t, screenWidth, size_t screenHeight) {
  *      a missle structure
  */
 static Missle create_missle() {
-
+    return NULL;
 }
 
 /**
@@ -65,7 +68,9 @@ static Missle create_missle() {
  *      missle is set equal to NULL
  */
 static void destroy_missle(Missle missle) {
+    assert(missle != NULL);
 
+    missle = NULL;
 }
 
 /**
@@ -77,7 +82,7 @@ static void destroy_missle(Missle missle) {
  *      NULL
  */
 static void *missle_t(void) {
-
+    return NULL;
 }
 
 void *attack_t(void) {
@@ -85,11 +90,11 @@ void *attack_t(void) {
     // wait for them to fall with thread_join
     // cleanup missles
     // repeat
-
+    return NULL;
 }
 
 void *defense_t(void) {
-
+    return NULL;
 }
 
 
