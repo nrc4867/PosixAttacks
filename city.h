@@ -59,7 +59,7 @@ unsigned int init_city(FILE *city, size_t screenWidth, size_t screenHeight);
  * pre -
  *      init_city() has been called
  */
-void destroy_city();
+void destroy_city(void);
 
 /**
  * attack_t()
