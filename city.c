@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <ncurses.h>
 #include <pthread.h>
+#include <limits.h>
 #include "city.h"
 
 typedef struct CITY {
@@ -43,6 +44,9 @@ static City city = NULL; /// basic city statitics
 
 #define P_INT(x) printf("%s: %i\n", (#x), (int)(x))
 #define P_STR(x) printf("%s: %s\n", (#x), (x))
+
+#define MAX(x, y) ((x) > (y))?(x):(y)
+#define MIN(x, y) ((x) > (y))?(y):(x)
 
 #ifdef DEBUG
 
@@ -82,10 +86,39 @@ static void dump_variables() {
  */
 unsigned int is_digit(char* string) {
     for(int i = 0; string[i] != '\0'; i++) {
-        if((string[i] >= '0' || string[i] <= '9'))
+        if(!(string[i] >= '0' || string[i] <= '9'))
             return 0;
     }
     return 1;
+}
+
+static void draw_wall(int x, unsigned long currHeight) {
+    for(unsigned long i = city->lowest; i < currHeight; i++) {
+        mvprintw(height - i, x, "%c", WALL_C);
+    }
+}
+
+static void init_city(char* buffer, int* off, unsigned long* lastHeight) {
+    char* token = strtok(buffer, " \n");
+    while(token != NULL) {
+        if(!is_digit(token)) continue;
+        unsigned long currHeight = strtol(token, NULL, 10);
+        
+        city->highest = MAX(city->highest, currHeight);
+        city->lowest = MIN(city->lowest, currHeight);
+
+        // draw city wall when there is a height difference
+        if(currHeight != *lastHeight) {
+           draw_wall(*off, MAX(*lastHeight, currHeight)); 
+        } else { // draw ground
+            mvprintw(height - currHeight, *off, "%c", FLOOR_C);
+            refresh();
+        }
+        
+        *lastHeight = currHeight;
+        *off = *off + 1;
+        token = strtok(NULL, " ");
+    }
 }
 
 /**
@@ -104,12 +137,13 @@ unsigned int is_digit(char* string) {
 static void read_uncommented(char** buffer, size_t* len, FILE* stream) {
     // get a line that does not start with  COMMENT_CHARACTER
     while(getline(buffer, len, stream) != -1 && 
-                (*buffer)[0] == COMMENT_CHARACTER);
+                ((*buffer)[0] == COMMENT_CHARACTER ||
+                (*buffer)[0] == '\n'));
 
     // remove parts of the string trailing the COMMENT_CHARACTER
     for(int i = 0; (*buffer)[i] != '\0'; i++)
-        if(*(buffer)[i] == COMMENT_CHARACTER) {
-            *(buffer)[i] = '\0';
+        if((*buffer)[i] == COMMENT_CHARACTER) {
+            (*buffer)[i] = '\0';
             break;
         }
 }
@@ -148,15 +182,30 @@ unsigned int init_city(FILE *cityFile,
     city->attacker = strdup(buffer);
 
     read_uncommented(&buffer, &len, cityFile);
-    sscanf(buffer, "%li", &missles);
     int temp;
-    if(sscanf(buffer, "%i", &temp) != 0) return 4; // no missles
+    if(sscanf(buffer, "%li %i", &missles, &temp) != 1) return 4; // no missles
+   
+    city->lowest = ULONG_MAX;
+    city->highest = 0;
     
-    do {
-        read_uncommented(&buffer, &len, cityFile);
-        printf("%s", buffer);
-    } while(strlen(buffer) > 0);
+    read_uncommented(&buffer, &len, cityFile);
+    if(sscanf(buffer, "%i", &temp) != 1) return 5; // no city
 
+    int offset = 0;
+    unsigned long lastHeight = temp;
+    do {
+        draw_city(buffer, &offset, &lastHeight);
+        read_uncommented(&buffer, &len, cityFile);
+    } while(strcspn(buffer, "\n") > 0);
+   
+    move(height - 2, offset++);
+    do {
+        printw("%c", FLOOR_C);
+        refresh();
+    } while(offset++ < (int)width);
+
+    refresh();
+    //getch();
     #ifdef DEBUG 
         dump_variables();
     #endif    
