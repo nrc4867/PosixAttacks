@@ -98,7 +98,7 @@ static void draw_wall(int x, unsigned long currHeight) {
     }
 }
 
-static void init_city(char* buffer, int* off, unsigned long* lastHeight) {
+static void draw_city(char* buffer, int* off, unsigned long* lastHeight) {
     char* token = strtok(buffer, " \n");
     while(token != NULL) {
         if(!is_digit(token)) continue;
@@ -108,11 +108,14 @@ static void init_city(char* buffer, int* off, unsigned long* lastHeight) {
         city->lowest = MIN(city->lowest, currHeight);
 
         // draw city wall when there is a height difference
-        if(currHeight != *lastHeight) {
-           draw_wall(*off, MAX(*lastHeight, currHeight)); 
-        } else { // draw ground
+        if(currHeight > *lastHeight) {
+           draw_wall(*off, currHeight); 
+        } else if (currHeight < *lastHeight) {
             mvprintw(height - currHeight, *off, "%c", FLOOR_C);
-            refresh();
+            mvprintw(height - *lastHeight, *off -1, " ");
+            draw_wall(*off - 1, *lastHeight);
+        } else { // draw ground
+            mvwprintw(stdscr, height - currHeight, *off, "%c", FLOOR_C); 
         }
         
         *lastHeight = currHeight;
@@ -198,14 +201,10 @@ unsigned int init_city(FILE *cityFile,
         read_uncommented(&buffer, &len, cityFile);
     } while(strcspn(buffer, "\n") > 0);
    
-    move(height - 2, offset++);
     do {
-        printw("%c", FLOOR_C);
-        refresh();
+        mvwprintw(stdscr, height - 2, offset, "%c", FLOOR_C);
     } while(offset++ < (int)width);
 
-    refresh();
-    //getch();
     #ifdef DEBUG 
         dump_variables();
     #endif    
