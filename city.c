@@ -92,14 +92,36 @@ unsigned int is_digit(char* string) {
     return 1;
 }
 
+/**
+ * draw_wall()
+ *      draw a building wall in the city on the virtual stdscr
+ * args -
+ *      x          - x offset to move the cursor to
+ *      currHeight - the height of the wall
+ */
 static void draw_wall(int x, unsigned long currHeight) {
     for(unsigned long i = city->lowest; i < currHeight; i++) {
         mvprintw(height - i, x, "%c", WALL_C);
     }
 }
 
-static void draw_city(char* buffer, int* off, unsigned long* lastHeight) {
-    char* token = strtok(buffer, " \n");
+/**
+ * draw_city()
+ *      draw part of the city to the virtual stdscr
+ * args - 
+ *      buffer - character buffer of ints seperated by spaces
+ *               theses values will be used as heights to build
+ *               the city
+ *      off    - pointer to an integer offset for the x-coord to
+ *               start drawing at
+ *      lastHeight - the height of the last space read
+ * post -
+ *      the city is partially drawn to the virtual stdscr.
+ *      offset and lastHeight changed to the last position drawn
+ */
+static void draw_city(const char* buffer, int* off, unsigned long* lastHeight) {
+    char* copy = strdup(buffer);
+    char* token = strtok(copy, " \n");
     while(token != NULL) {
         if(!is_digit(token)) continue;
         unsigned long currHeight = strtol(token, NULL, 10);
@@ -122,6 +144,7 @@ static void draw_city(char* buffer, int* off, unsigned long* lastHeight) {
         *off = *off + 1;
         token = strtok(NULL, " ");
     }
+    free(copy);
 }
 
 /**
