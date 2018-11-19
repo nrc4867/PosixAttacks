@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <assert.h>
 #include <ncurses.h>
@@ -25,13 +26,12 @@ typedef struct CITY {
 typedef struct PLATFORM {
     unsigned int center; /// the poisition of the center of the plaform
     unsigned int row; /// the row of the platform on the screen
-} * Platform;
+} Platform;
 
 typedef struct MISSLE {
     unsigned int row; /// the current row on the screen
     unsigned int column; /// the column the missle falls on
-    unsigned int wait; /// the wait time after the start of the game
-} * Missle;
+} Missle;
 
 
 static int attack = 1; /// indicate if the attack is still continuing
@@ -41,6 +41,9 @@ static size_t width = 0; /// width of the screen determined by ncurses
 static size_t height = 0; /// height of the screen determined by ncurses
 
 static City city = NULL; /// basic city statitics 
+
+/// Thread lock used for moving cursor and writing to the screen
+static pthread_mutex_t DRAWING = PTHREAD_MUTEX_INITIALIZER;
 
 #define P_INT(x) printf("%s: %i\n", (#x), (int)(x))
 #define P_STR(x) printf("%s: %s\n", (#x), (x))
@@ -137,9 +140,10 @@ static void draw_city(const char* buffer, int* off, unsigned long* lastHeight) {
             mvprintw(height - *lastHeight, *off -1, " ");
             draw_wall(*off - 1, *lastHeight);
         } else { // draw ground
-            mvwprintw(stdscr, height - currHeight, *off, "%c", FLOOR_C); 
+            mvwprintw(stdscr, height - currHeight, *off, "%c", FLOOR_C);
+            refresh(); 
         }
-        
+
         *lastHeight = currHeight;
         *off = *off + 1;
         token = strtok(NULL, " ");
@@ -190,6 +194,8 @@ unsigned int init_city(FILE *cityFile,
     assert(cityFile != NULL);
     assert(screenWidth > 0 && screenHeight > 0);
 
+    //srand();
+ 
     width = screenWidth;
     height = screenHeight;
 
@@ -216,7 +222,8 @@ unsigned int init_city(FILE *cityFile,
     
     read_uncommented(&buffer, &len, cityFile);
     if(sscanf(buffer, "%i", &temp) != 1) return 5; // no city
-
+    
+    // Begin drawing the city by reading the file line by line
     int offset = 0;
     unsigned long lastHeight = temp;
     do {
@@ -224,8 +231,9 @@ unsigned int init_city(FILE *cityFile,
         read_uncommented(&buffer, &len, cityFile);
     } while(strcspn(buffer, "\n") > 0);
    
-    do {
-        mvwprintw(stdscr, height - 2, offset, "%c", FLOOR_C);
+    do { // fill in the remaining area of the screen
+        mvwprintw(stdscr, height - ASSUME_FLOOR, offset, "%c", FLOOR_C);
+        refresh();
     } while(offset++ < (int)width);
 
     #ifdef DEBUG 
@@ -254,35 +262,6 @@ void destroy_city() {
 }
 
 /**
- * createMissle()
- *      create a randomly placed missle structure
- * pre -
- *      city has already been initialized with 
- *      screen width/height != 0
- * returns - 
- *      a missle structure
- */
-static Missle create_missle() {
-    return NULL;
-}
-
-/**
- * destroy_missle()
- *      cleanup a missle structure
- * pre - 
- *      missle is not NULL
- * args - 
- *     missle - the missle to cleanup 
- * post - 
- *      missle is set equal to NULL
- */
-static void destroy_missle(Missle missle) {
-    assert(missle != NULL);
-
-    missle = NULL;
-}
-
-/**
  * missle_t()
  *      creates and controls a missle structure onscreen.
  *      Waits MISSLE_SPEED between each iteration of the
@@ -290,17 +269,42 @@ static void destroy_missle(Missle missle) {
  * returns - 
  *      NULL
  */
-static void *missle_t(void) {
+static void *missle_t(void* param) {
+    (void) param;
+    Missle* missle = (Missle*)malloc(sizeof(Missle));
+    assert(missle != NULL); // prevent out of memory error
+    missle->row = 0;
+    missle->column = rand() % width;
+    
+    while(1) {
+        pthread_mutex_lock(&DRAWING);
+        mvprintw(missle->row++, missle->column, " ");
+        if(missle->row == 10) break;
+        mvprintw(missle->row, missle->column, "%c", MISSLE_C);
+        refresh();
+        pthread_mutex_unlock(&DRAWING);
+        usleep(1000);
+    }
 
+    free(missle);
     return NULL;
 }
 
 void *attack_t(void) {
     assert(city != NULL);
-    // spawn random amount of missles 
-    // wait for them to fall with thread_join
-    // cleanup missles
-    // repeat
+    while(attack && missles != 0) {
+        if(missles < -1) missles--;
+
+        int maxMissles = 5;
+
+        pthread_t* missleThreads = malloc(sizeof(pthread_t) * maxMissles);
+
+        for(int i = 0; i < 5; i++)
+            pthread_create(&missleThreads[i], NULL, missle_t, NULL);
+        for(int i = 0; i < 5; i++)
+            pthread_join(missleThreads[i], NULL);
+        free(missleThreads);
+    }
     return NULL;
 }
 
@@ -309,5 +313,4 @@ void *defense_t(void) {
 
     return NULL;
 }
-
 
