@@ -24,7 +24,7 @@ typedef struct CITY {
 } * City;
 
 typedef struct PLATFORM {
-    unsigned int center; /// the poisition of the center of the plaform
+    unsigned int column; /// the poisition of the center of the plaform
     unsigned int row; /// the row of the platform on the screen
 } Platform;
 
@@ -140,7 +140,7 @@ static void draw_city(const char* buffer, int* off, unsigned long* lastHeight) {
             mvprintw(height - *lastHeight, *off -1, " ");
             draw_wall(*off - 1, *lastHeight);
         } else { // draw ground
-            mvwprintw(stdscr, height - currHeight, *off, "%c", FLOOR_C);
+            mvprintw(height - currHeight, *off, "%c", FLOOR_C);
             refresh(); 
         }
 
@@ -190,7 +190,7 @@ static void read_uncommented(char** buffer, size_t* len, FILE* stream) {
  *      city global variable created and set by function
  */
 unsigned int init_city(FILE *cityFile, 
-                            size_t screenWidth, size_t screenHeight) {
+                            int screenWidth, int screenHeight) {
     assert(cityFile != NULL);
     assert(screenWidth > 0 && screenHeight > 0);
 
@@ -222,7 +222,7 @@ unsigned int init_city(FILE *cityFile,
     
     read_uncommented(&buffer, &len, cityFile);
     if(sscanf(buffer, "%i", &temp) != 1) return 5; // no city
-    
+ 
     // Begin drawing the city by reading the file line by line
     int offset = 0;
     unsigned long lastHeight = temp;
@@ -232,7 +232,7 @@ unsigned int init_city(FILE *cityFile,
     } while(strcspn(buffer, "\n") > 0);
    
     do { // fill in the remaining area of the screen
-        mvwprintw(stdscr, height - ASSUME_FLOOR, offset, "%c", FLOOR_C);
+        mvprintw(height - ASSUME_FLOOR, offset, "%c", FLOOR_C);
         refresh();
     } while(offset++ < (int)width);
 
@@ -279,38 +279,82 @@ static void *missle_t(void* param) {
     while(1) {
         pthread_mutex_lock(&DRAWING);
         mvprintw(missle->row++, missle->column, " ");
-        if(missle->row == 10) break;
-        mvprintw(missle->row, missle->column, "%c", MISSLE_C);
+
+        char ch = mvinch(missle->row, missle->column) & A_CHARTEXT;
+        if(ch == ' ' || ch == EXPLODED_C) {
+            mvprintw(missle->row, missle->column, "%c", MISSLE_C);
+        }
+        else if(ch == SHEILD_C || ch == WALL_C || ch == HIT_C) {
+            mvprintw(missle->row - 1, missle->column, "%c", EXPLODED_C);
+            mvprintw(missle->row, missle->column, "%c", HIT_C); 
+            break;
+        } else if (ch == FLOOR_C) {
+            mvprintw(missle->row, missle->column, "%c", EXPLODED_C);
+            mvprintw(missle->row + 1, missle->column, "%c", HIT_C); 
+            break; 
+        }
         refresh();
         pthread_mutex_unlock(&DRAWING);
-        usleep(1000);
+        usleep((rand() % MISSLE_SPEED) * 1000);
     }
+    refresh();
+    pthread_mutex_unlock(&DRAWING);
 
     free(missle);
     return NULL;
 }
 
-void *attack_t(void) {
+void *attack_t(void* param) {
+    (void) param;
     assert(city != NULL);
     while(attack && missles != 0) {
-        if(missles < -1) missles--;
+        if(missles > 0) missles--;
 
-        int maxMissles = 5;
+        int maxMissles = missles;
 
         pthread_t* missleThreads = malloc(sizeof(pthread_t) * maxMissles);
 
-        for(int i = 0; i < 5; i++)
+        for(int i = 0; i < maxMissles; i++)
             pthread_create(&missleThreads[i], NULL, missle_t, NULL);
-        for(int i = 0; i < 5; i++)
+        for(int i = 0; i < maxMissles; i++)
             pthread_join(missleThreads[i], NULL);
+
+        attack = 0;
         free(missleThreads);
     }
     return NULL;
 }
 
-void *defense_t(void) {
-    assert(city != NULL);
+static void drawSheild(const Platform* platform) {
+    pthread_mutex_lock(&DRAWING);
+    move(platform->row, 0);
+    clrtoeol();
+    for(int i = 0; i < PLATFORM_SIZE; i++) {
+        mvprintw(height - platform->row, 
+                    platform->column + i, "%c", SHEILD_C);
+        refresh();
+    }
+    pthread_mutex_unlock(&DRAWING);
+}
 
+void *defense_t(void* param) {
+    (void) param;
+    assert(city != NULL);
+    Platform platform = {width / 2, city->highest + 1};
+    char input = ' ';
+    while(attack) {
+        if(input == 'a' && platform.column != 0) {
+            platform.column--;
+        } else if(input == 'd' && platform.column + PLATFORM_SIZE != width) {
+            platform.column++;
+        } else if(input == 'q') {
+            attack = 0;
+            break;
+        }
+        drawSheild(&platform);
+        usleep(1000 * 30);
+        input = getch();
+    }
     return NULL;
 }
 
