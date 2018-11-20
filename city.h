@@ -16,13 +16,15 @@
 #define HIT_C '*' /// explosion indicator
 #define SHEILD_C '#' /// sheild platfrom the player controls
 
-#define PLATFORM_SIZE 5 /// the size of the player sheild that is drawn
-
 /// game properties
+#define PLATFORM_SIZE 5 /// the size of the player sheild that is drawn
+#define QUIT_M 'q' /// Button used for whe the player wants to quit
+#define LEFT_M 68 /// button used for the player to move left
+#define RIGHT_M 67 /// button used for the player to move right
 
 /// delay between thread cycles, measured with usleep
-#define MISSLE_SPEED 1000 /// the speed the missles drop at
-#define PLATFORM_SPEED 1000 /// the speed the platform moves at
+#define MISSLE_SPEED 500 /// the speed the missles drop at
+#define PLATFORM_SPEED 20 /// the speed the platform moves at
 
 #define MAX_MISSLES 10 /// max amount of missle threads spawned by attack()
 
@@ -51,7 +53,7 @@
  * post -
  *      the city has been drawn and is waiting on refresh by ncurses
  */
-unsigned int init_city(FILE *city, size_t screenWidth, size_t screenHeight);
+unsigned int init_city(FILE *city, int screenWidth, int screenHeight);
 
 /**
  * destroy_city()
@@ -65,23 +67,21 @@ void destroy_city(void);
  * attack_t()
  *      start the attack. Each interation of the loop will create
  *      a random amount of missles until the missle count is 0 or the
- *      attack has been ended by the user.
- *      The loop will interate each time there are no remaining 
- *      missles on screen. 
+ *      attack has been ended by the user.  
  * pre - 
  *      city has been initalized with screen width/height != 0.
  * returns -
  *      NULL
  */
-void *attack_t(void);
+void *attack_t(void* param);
 
 /**
  * defense_t()
  *      start the defense. Accept user input (-> or <- keys) to move the
- *      sheild platform over the city. 
+ *      sheild platform over the city. runs until the player ends the attack.
  * returns -
  *      NULL
  */
-void *defense_t(void);
+void *defense_t(void* parma);
 
 #endif /// city.h

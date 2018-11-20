@@ -193,8 +193,6 @@ unsigned int init_city(FILE *cityFile,
                             int screenWidth, int screenHeight) {
     assert(cityFile != NULL);
     assert(screenWidth > 0 && screenHeight > 0);
-
-    //srand();
  
     width = screenWidth;
     height = screenHeight;
@@ -266,6 +264,8 @@ void destroy_city() {
  *      creates and controls a missle structure onscreen.
  *      Waits MISSLE_SPEED between each iteration of the
  *      threads loop. Then cleans up the created thread.
+ * args - 
+ *      param - Unused.
  * returns - 
  *      NULL
  */
@@ -304,6 +304,10 @@ static void *missle_t(void* param) {
     return NULL;
 }
 
+/**
+ * attack_t()
+ *      see city.h for details
+ */
 void *attack_t(void* param) {
     (void) param;
     assert(city != NULL);
@@ -319,15 +323,23 @@ void *attack_t(void* param) {
         for(int i = 0; i < maxMissles; i++)
             pthread_join(missleThreads[i], NULL);
 
-        attack = 0;
         free(missleThreads);
     }
     return NULL;
 }
 
+
+/**
+ * drawSheild()
+ *      draw the sheild over the city
+ * args -
+ *      platform - structure representing the sheild.
+ *                 the row that the sheild is on will be
+ *                 cleared on redraw.
+ */
 static void drawSheild(const Platform* platform) {
     pthread_mutex_lock(&DRAWING);
-    move(platform->row, 0);
+    move(height - platform->row, 0);
     clrtoeol();
     for(int i = 0; i < PLATFORM_SIZE; i++) {
         mvprintw(height - platform->row, 
@@ -337,22 +349,29 @@ static void drawSheild(const Platform* platform) {
     pthread_mutex_unlock(&DRAWING);
 }
 
+/**
+ * defense_t()
+ *      see city.h for details
+ * post - 
+ *      attack global variable is set to 0
+ */
 void *defense_t(void* param) {
     (void) param;
     assert(city != NULL);
     Platform platform = {width / 2, city->highest + 1};
     char input = ' ';
     while(attack) {
-        if(input == 'a' && platform.column != 0) {
+        if(input == LEFT_M && platform.column != 0) {
             platform.column--;
-        } else if(input == 'd' && platform.column + PLATFORM_SIZE != width) {
+        } else if(input == RIGHT_M && 
+                        platform.column + PLATFORM_SIZE != width) {
             platform.column++;
-        } else if(input == 'q') {
+        } else if(input == QUIT_M) {
             attack = 0;
             break;
         }
         drawSheild(&platform);
-        usleep(1000 * 30);
+        usleep(1000 * PLATFORM_SPEED);
         input = getch();
     }
     return NULL;
