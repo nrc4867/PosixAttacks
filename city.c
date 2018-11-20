@@ -214,7 +214,8 @@ unsigned int init_city(FILE *cityFile,
     read_uncommented(&buffer, &len, cityFile);
     int temp;
     if(sscanf(buffer, "%li %i", &missles, &temp) != 1) return 4; // no missles
-   
+    if(missles == UNLIMITED_MISSLES) missles = -1; // unlimited missles    
+ 
     city->lowest = ULONG_MAX;
     city->highest = 0;
     
@@ -312,9 +313,9 @@ void *attack_t(void* param) {
     (void) param;
     assert(city != NULL);
     while(attack && missles != 0) {
-        if(missles > 0) missles--;
 
-        int maxMissles = missles;
+        int maxMissles = (missles > 0)?MIN(missles, MAX_MISSLES):MAX_MISSLES;
+        if(missles > 0) missles -= maxMissles;
 
         pthread_t* missleThreads = malloc(sizeof(pthread_t) * maxMissles);
 
@@ -344,7 +345,6 @@ static void drawSheild(const Platform* platform) {
     for(int i = 0; i < PLATFORM_SIZE; i++) {
         mvprintw(height - platform->row, 
                     platform->column + i, "%c", SHEILD_C);
-        refresh();
     }
     pthread_mutex_unlock(&DRAWING);
 }
@@ -371,8 +371,13 @@ void *defense_t(void* param) {
             break;
         }
         drawSheild(&platform);
-        usleep(1000 * PLATFORM_SPEED);
-        input = getch();
+        // add a short time delay between input to smooth movement
+        usleep(1000 * 2);
+        // get the players next input
+        pthread_mutex_lock(&DRAWING);
+        input = mvgetch(height - platform.row, 
+                            platform.column + PLATFORM_SIZE/2);
+        pthread_mutex_unlock(&DRAWING);
     }
     return NULL;
 }

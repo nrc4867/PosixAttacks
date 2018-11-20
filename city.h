@@ -29,7 +29,7 @@
 #define MAX_MISSLES 10 /// max amount of missle threads spawned by attack()
 
 /// city file disciptors
-#define INFINITE_MISSLE_BATTLE 0 /// flag for an infinte missle battle
+#define UNLIMITED_MISSLES 0 /// flag for an infinte missle battle
 #define COMMENT_CHARACTER '#' /// line character to indicate a comment
 #define ASSUME_FLOOR 2 /// floor height assumtion for any missing spaces
 
@@ -79,6 +79,8 @@ void *attack_t(void* param);
  * defense_t()
  *      start the defense. Accept user input (-> or <- keys) to move the
  *      sheild platform over the city. runs until the player ends the attack.
+ * pre - 
+ *      ncurses is in nodealy mode on stdscr
  * returns -
  *      NULL
  */
