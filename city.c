@@ -237,7 +237,7 @@ void destroy_city() {
  */
 static void *missle_t(void* param) {
     (void) param;
-    Missle missle = {0, rand() % width};
+    Missle missle = {1, rand() % width};
     
     // spread out the missle creation
     usleep(rand() % MISSLE_SPEED * 10);
@@ -269,8 +269,12 @@ static void *missle_t(void* param) {
             break; 
         } 
         
-        // error correction for missle out of bounds!
-        if(height - missle.row <= city->lowest) break;
+        // explode on the bottom of the screen
+        if(height - missle.row <= city->lowest) {
+            mvprintw(missle.row, missle.column, "%c", EXPLODED_C);
+            mvprintw(missle.row + 1, missle.column, "%c", HIT_C); 
+            break;
+        }
 
         refresh();
         pthread_mutex_unlock(&DRAWING);
