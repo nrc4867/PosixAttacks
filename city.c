@@ -101,7 +101,7 @@ static void draw_city(const char* buffer, int* off, unsigned long* lastHeight) {
         unsigned long currHeight = strtol(token, NULL, 10);
         
         city->highest = MAX(city->highest, currHeight);
-        city->lowest = MIN(city->lowest, currHeight);
+        //city->lowest = MIN(city->lowest, currHeight);
 
         // draw city wall when there is a height difference
         if(currHeight > *lastHeight) {
@@ -136,6 +136,7 @@ static void draw_city(const char* buffer, int* off, unsigned long* lastHeight) {
  *      buffer length may equal 0.
  */
 static void read_uncommented(char** buffer, size_t* len, FILE* stream) {
+    if(*buffer != NULL) (*buffer)[0] = '\0';
     // get a line that does not start with  COMMENT_CHARACTER
     while(getline(buffer, len, stream) != -1 && 
                 ((*buffer)[0] == COMMENT_CHARACTER ||
@@ -171,29 +172,45 @@ unsigned int init_city(FILE *cityFile,
     city = (City)malloc(sizeof(struct CITY));
     assert(city != NULL);
 
+    int status = 0;
     char* buffer = NULL; // file read buffer
-    size_t len = 0; // file line length 
+    size_t len = -1; // file line length 
     // read defender 
     read_uncommented(&buffer, &len, cityFile);
-    if(!strlen(buffer)) return 2; // no defender
+    buffer[strlen(buffer) -1] = '\0';
+    if(!strlen(buffer)) {
+        status = 2; // no defender
+        goto cleanup;
+    }
     city->defender = strdup(buffer);
-    city->defender[strlen(buffer) -1] = '\0';
+    
     // read attacker
     read_uncommented(&buffer, &len, cityFile);
-    if(!strlen(buffer)) return 3; // no attacker
+    buffer[strlen(buffer) -1] = '\0';
+    if(!strlen(buffer)) {
+        status = 3; // no attacker
+        goto cleanup;
+    }
     city->attacker = strdup(buffer);
-    city->attacker[strlen(buffer) -1] = '\0';
+    
     // read missle count
     read_uncommented(&buffer, &len, cityFile);
     int temp;
-    if(sscanf(buffer, "%li %i", &missles, &temp) != 1) return 4; // no missles
+    if(sscanf(buffer, "%li %i", &missles, &temp) != 1) {
+        status = 4; // no missles
+        goto cleanup;
+    }
+
     if(missles == UNLIMITED_MISSLES) missles = -1; // unlimited missles    
     // read and create cityscape
-    city->lowest = ULONG_MAX;
-    city->highest = 0;
-    
+    city->lowest = ASSUME_FLOOR;
+    city->highest = ASSUME_FLOOR;   
+ 
     read_uncommented(&buffer, &len, cityFile);
-    if(sscanf(buffer, "%i", &temp) != 1) return 5; // no city
+    if(sscanf(buffer, "%i", &temp) != 1) {
+        status = 5; // no city
+        goto cleanup;
+    }
  
     // Begin drawing the city by reading the file line by line
     int offset = 0;
@@ -208,8 +225,9 @@ unsigned int init_city(FILE *cityFile,
         refresh();
     } while(offset++ < (int)width);
 
+    cleanup: // stop execution
     free(buffer);
-    return 0;
+    return status;
 }
 
 /**
@@ -258,9 +276,9 @@ static void *missle_t(void* param) {
 
         // decide where to draw the missle based 
         // on the character already in its new position
-        if(ch == ' ' || ch == EXPLODED_C || ch == HIT_C) {
+        if(ch == ' ' || ch == EXPLODED_C) {
             mvprintw(missle.row, missle.column, "%c", MISSLE_C);
-        } else if(ch != FLOOR_C && height - missle.row != city->lowest) {
+        } else if(ch != FLOOR_C && ch != HIT_C && height - missle.row != city->lowest) {
             mvprintw(missle.row - 1, missle.column, "%c", EXPLODED_C);
             mvprintw(missle.row, missle.column, "%c", HIT_C); 
             break;
@@ -356,7 +374,7 @@ void *defense_t(void* param) {
     assert(city != NULL);
 
     pthread_mutex_lock(&DRAWING_ML);
-    mvprintw(0 ,0, "Enter 'q' to quit at end of attack," 
+    mvprintw(0 ,0, "Enter 'q' to quit at end of attack, " 
                         "or control-C");
     pthread_mutex_unlock(&DRAWING_ML);
 
