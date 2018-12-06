@@ -13,36 +13,37 @@
 #include <ncurses.h>
 #include <pthread.h>
 #include <limits.h>
+#include <time.h>
 #include "city.h"
 
 typedef struct CITY {
     size_t highest; /// the highest hit in the city
     size_t lowest; /// the lowest point in the city
-    unsigned int hits; /// the amount of missles that hit
+    unsigned int hits; /// the amount of missiles that hit
     char* attacker; /// city attacker name
     char* defender; /// city defender name
 } * City;
 
 typedef struct PLATFORM {
-    unsigned int column; /// the poisition of the center of the plaform
+    unsigned int column; /// the position of the center of the platform
     unsigned int row; /// the row of the platform on the screen
 } Platform;
 
-typedef struct MISSLE {
+typedef struct MISSILE {
     unsigned int row; /// the current row on the screen
-    unsigned int column; /// the column the missle falls on
+    unsigned int column; /// the column the missile falls on
 } Missle;
 
 
 static int attack = 1; /// indicate if the attack is still continuing
-static long missles = 0; /// amount of missles that remain (if < 0: infinite)
+static long missiles = 0; /// amount of missiles that remain (if < 0: infinite)
 
-static long missles_s = 0;
+static long missiles_s = 0;
 
 static size_t width = 0; /// width of the screen determined by ncurses
 static size_t height = 0; /// height of the screen determined by ncurses
 
-static City city = NULL; /// basic city statitics 
+static City city = NULL; /// basic city stats
 
 /// Thread lock used for moving cursor and writing to the screen
 static pthread_mutex_t DRAWING_ML = PTHREAD_MUTEX_INITIALIZER;
@@ -173,6 +174,8 @@ unsigned int init_city(FILE *cityFile,
     city = (City)malloc(sizeof(struct CITY));
     assert(city != NULL);
 
+    srand(time(NULL));
+
     int status = 0;
     char* buffer = NULL; // file read buffer
     size_t len = -1; // file line length 
@@ -194,15 +197,15 @@ unsigned int init_city(FILE *cityFile,
     }
     city->attacker = strdup(buffer);
     
-    // read missle count
+    // read missile count
     read_uncommented(&buffer, &len, cityFile);
     int temp;
-    if(sscanf(buffer, "%li %i", &missles, &temp) != 1) {
-        status = 4; // no missles
+    if(sscanf(buffer, "%li %i", &missiles, &temp) != 1) {
+        status = 4; // no missiles
         goto cleanup;
     }
 
-    if(missles == UNLIMITED_MISSLES) missles = -1; // unlimited missles    
+    if(missiles == UNLIMITED_MISSILES) missiles = -1; // unlimited missiles    
     // read and create cityscape
     city->lowest = ASSUME_FLOOR;
     city->highest = ASSUME_FLOOR;   
@@ -249,58 +252,62 @@ void destroy_city() {
 }
 
 /**
- * missle_t()
- *      creates and controls a missle structure onscreen.
- *      Waits MISSLE_SPEED between each iteration of the
+ * missile_t()
+ *      creates and controls a missile structure onscreen.
+ *      Waits MISSILE_SPEED between each iteration of the
  *      threads loop. Then cleans up the created thread.
  * args - 
  *      param - Unused.
  * returns - 
  *      NULL
  */
-static void *missle_t(void* param) {
+static void *missile_t(void* param) {
     (void) param;
-    Missle missle = {1, rand() % width};
+    Missle missile = {1, rand() % width};
 
     while(1) {
         pthread_mutex_lock(&DRAWING_ML);
         
-        // remove the old position of the missle from the display
-        mvprintw(missle.row++, missle.column, " ");
+        char ch = mvinch(missile.row, missile.column) & A_CHARTEXT;
+        if(ch == HIT_C) // another missile has just exploded here
+            break;
 
-        // get the character on the current line of the missle
-        char ch = mvinch(missle.row, missle.column) & A_CHARTEXT;
+        // remove the old position of the missile from the display
+        mvprintw(missile.row++, missile.column, " ");
 
-        // dont allow the missle to completely destroy the sheild
-        if(ch == HIT_C && height - missle.row > city->highest)
+        // get the character on the current line of the missile
+        ch = mvinch(missile.row, missile.column) & A_CHARTEXT;
+
+        // dont allow the missile to completely destroy the sheild
+        if(ch == HIT_C && height - missile.row > city->highest)
             break; 
 
-        // decide where to draw the missle based 
+        // decide where to draw the missile based 
         // on the character already in its new position
         if(ch == ' ' || ch == EXPLODED_C) {
-            mvprintw(missle.row, missle.column, "%c", MISSLE_C);
-        } else if(ch != FLOOR_C && ch != HIT_C && height - missle.row != city->lowest) {
-            mvprintw(missle.row - 1, missle.column, "%c", EXPLODED_C);
-            mvprintw(missle.row, missle.column, "%c", HIT_C); 
+            mvprintw(missile.row, missile.column, "%c", MISSILE_C);
+        } else if(ch != FLOOR_C && ch != HIT_C && height - missile.row != city->lowest) {
+            mvprintw(missile.row - 1, missile.column, "%c", EXPLODED_C);
+            mvprintw(missile.row, missile.column, "%c", HIT_C); 
             break;
         } else {
-            mvprintw(missle.row, missle.column, "%c", EXPLODED_C);
-            mvprintw(missle.row + 1, missle.column, "%c", HIT_C); 
+            mvprintw(missile.row, missile.column, "%c", EXPLODED_C);
+            mvprintw(missile.row + 1, missile.column, "%c", HIT_C); 
             break; 
         } 
         
         // explode on the bottom of the screen
-        if(height - missle.row <= city->lowest) {
-            mvprintw(missle.row, missle.column, "%c", EXPLODED_C);
-            mvprintw(missle.row + 1, missle.column, "%c", HIT_C); 
+        if(height - missile.row <= city->lowest) {
+            mvprintw(missile.row, missile.column, "%c", EXPLODED_C);
+            mvprintw(missile.row + 1, missile.column, "%c", HIT_C); 
             break;
         }
 
         refresh();
         pthread_mutex_unlock(&DRAWING_ML);
-        usleep((rand() % MISSLE_SPEED) * 1000);
+        usleep((rand() % MISSILE_SPEED) * 1000);
     }
-    refresh(); // redraw the final position of the missle
+    refresh(); // redraw the final position of the missile
     pthread_mutex_unlock(&DRAWING_ML); // make sure to give up lock!
 
     return NULL;
@@ -316,25 +323,25 @@ void *attack_t(void* param) {
 
     pthread_mutex_lock(&ATTACKING_ML);
 
-    while(attack && missles != 0) {
-        int maxMissles = (missles > 0)?MIN(missles, MAX_MISSLES):MAX_MISSLES;
-        if(missles > 0) missles -= maxMissles;
+    while(attack && missiles != 0) {
+        int maxMissles = (missiles > 0)?MIN(missiles, MAX_MISSILES):MAX_MISSILES;
+        if(missiles > 0) missiles -= maxMissles;
 
-        // create and join a round of missle threads
-        pthread_t* missleThreads = malloc(sizeof(pthread_t) * maxMissles);
+        // create and join a round of missile threads
+        pthread_t* missileThreads = malloc(sizeof(pthread_t) * maxMissles);
 
         for(int i = 0; i < maxMissles; i++) {
-            pthread_create(&missleThreads[i], NULL, missle_t, NULL);
-            missles_s ++;
-            // spread out the missle creation
-            if(attack) usleep(rand() % MISSLE_SPEED * 1000);
+            pthread_create(&missileThreads[i], NULL, missile_t, NULL);
+            missiles_s ++;
+            // spread out the missile creation
+            if(attack) usleep(rand() % MISSILE_SPEED * 1000);
         }
         for(int i = 0; i < maxMissles; i++) {
-            pthread_join(missleThreads[i], NULL);
-            missles_s --;
+            pthread_join(missileThreads[i], NULL);
+            missiles_s --;
         }
 
-        free(missleThreads);
+        free(missileThreads);
     }
 
     pthread_mutex_lock(&DRAWING_ML);
@@ -347,14 +354,14 @@ void *attack_t(void* param) {
 
 
 /**
- * drawSheild()
- *      draw the sheild over the city
+ * drawShield()
+ *      draw the shield over the city
  * args -
- *      platform - structure representing the sheild.
- *                 the row that the sheild is on will be
+ *      platform - structure representing the shield.
+ *                 the row that the shield is on will be
  *                 cleared on redraw.
  */
-static void drawSheild(const Platform* platform) {
+static void drawShield(const Platform* platform) {
     pthread_mutex_lock(&DRAWING_ML);
     move(height - platform->row, 0);
     clrtoeol();
@@ -383,7 +390,7 @@ void *defense_t(void* param) {
 
     Platform platform = {width / 2, city->highest + 1};
     char input = ' ';
-    while(attack || missles_s) {
+    while(attack || missiles_s) {
         if(input == LEFT_M && platform.column != 0) {
             platform.column--;
         } else if(input == RIGHT_M && 
@@ -393,7 +400,7 @@ void *defense_t(void* param) {
             attack = 0;
         }
         if(input != -1) // there was a key pressed
-            drawSheild(&platform);
+            drawShield(&platform);
         // add a short time delay between input to smooth movement
         usleep(1000 * 2);
         // get the players next input
@@ -404,7 +411,8 @@ void *defense_t(void* param) {
 
     pthread_mutex_lock(&ATTACKING_ML);
     pthread_mutex_lock(&DRAWING_ML);
-    mvprintw(6, 0, "The %s defense has ended.", city->defender);
+    mvprintw(6, 0, "The %s defense has ended.\nHit enter to close...", 
+                        city->defender);
     pthread_mutex_unlock(&DRAWING_ML);
     pthread_mutex_unlock(&ATTACKING_ML);
 

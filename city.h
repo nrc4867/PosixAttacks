@@ -11,27 +11,27 @@
 /// objects to drawn on screen in ncurses
 #define WALL_C '|' /// wall of a building
 #define FLOOR_C '_' /// ground or top of building
-#define MISSLE_C '|' /// missle that falls from the sky
-#define EXPLODED_C '?' /// indicator for missle position before explosion
+#define MISSILE_C '|' /// missile that falls from the sky
+#define EXPLODED_C '?' /// indicator for missile position before explosion
 #define HIT_C '*' /// explosion indicator
-#define SHEILD_C '#' /// sheild platfrom the player controls
+#define SHEILD_C '#' /// shield platform the player controls
 
 /// game properties
-#define PLATFORM_SIZE 5 /// the size of the player sheild that is drawn
-#define QUIT_M 'q' /// Button used for whe the player wants to quit
+#define PLATFORM_SIZE 5 /// the size of the player shield that is drawn
+#define QUIT_M 'q' /// Button used for when the player wants to quit
 #define LEFT_M 68 /// button used for the player to move left
 #define RIGHT_M 67 /// button used for the player to move right
 
 /// delay between thread cycles, measured with usleep
-#define MISSLE_SPEED 500 /// the speed the missles drop at
+#define MISSILE_SPEED 500 /// the speed the missiles drop at
 #define PLATFORM_SPEED 20 /// the speed the platform moves at
 
-#define MAX_MISSLES 8 /// max amount of missle threads spawned by attack()
+#define MAX_MISSILES 8 /// max amount of missile threads spawned by attack()
 
-/// city file disciptors
-#define UNLIMITED_MISSLES 0 /// flag for an infinte missle battle
+/// city file descriptors
+#define UNLIMITED_MISSILES 0 /// flag for an infinite missile battle
 #define COMMENT_CHARACTER '#' /// line character to indicate a comment
-#define ASSUME_FLOOR 2 /// floor height assumtion for any missing spaces
+#define ASSUME_FLOOR 2 /// floor height for any missing spaces
 
 /**
  * init_city()
@@ -48,7 +48,7 @@
  *      1 - the city descriptor file cannot be read
  *      2 - missing defender name
  *      3 - missing attacker name
- *      4 - missing missle count
+ *      4 - missing missile count
  *      5 - missing city layout
  * post -
  *      the city has been drawn and is waiting on refresh by ncurses
@@ -65,11 +65,11 @@ void destroy_city(void);
 
 /**
  * attack_t()
- *      start the attack. Each interation of the loop will create
- *      a random amount of missles until the missle count is 0 or the
+ *      start the attack. Each iteration of the loop will create
+ *      a random amount of missiles until the missile count is 0 or the
  *      attack has been ended by the user.  
  * pre - 
- *      city has been initalized with screen width/height != 0.
+ *      city has been initialized with screen width/height != 0.
  * returns -
  *      NULL
  */
