@@ -37,6 +37,8 @@ typedef struct MISSLE {
 static int attack = 1; /// indicate if the attack is still continuing
 static long missles = 0; /// amount of missles that remain (if < 0: infinite)
 
+static long missles_s = 0;
+
 static size_t width = 0; /// width of the screen determined by ncurses
 static size_t height = 0; /// height of the screen determined by ncurses
 
@@ -323,11 +325,13 @@ void *attack_t(void* param) {
 
         for(int i = 0; i < maxMissles; i++) {
             pthread_create(&missleThreads[i], NULL, missle_t, NULL);
+            missles_s ++;
             // spread out the missle creation
             if(attack) usleep(rand() % MISSLE_SPEED * 1000);
         }
         for(int i = 0; i < maxMissles; i++) {
             pthread_join(missleThreads[i], NULL);
+            missles_s --;
         }
 
         free(missleThreads);
@@ -374,12 +378,12 @@ void *defense_t(void* param) {
 
     pthread_mutex_lock(&DRAWING_ML);
     mvprintw(0 ,0, "Enter 'q' to quit at end of attack, " 
-                        "or control-C");
+                        "or control-c");
     pthread_mutex_unlock(&DRAWING_ML);
 
     Platform platform = {width / 2, city->highest + 1};
     char input = ' ';
-    while(attack) {
+    while(attack || missles_s) {
         if(input == LEFT_M && platform.column != 0) {
             platform.column--;
         } else if(input == RIGHT_M && 
@@ -387,7 +391,6 @@ void *defense_t(void* param) {
             platform.column++;
         } else if(input == QUIT_M) {
             attack = 0;
-            break;
         }
         if(input != -1) // there was a key pressed
             drawSheild(&platform);
