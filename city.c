@@ -101,7 +101,6 @@ static void draw_city(const char* buffer, int* off, unsigned long* lastHeight) {
         unsigned long currHeight = strtol(token, NULL, 10);
         
         city->highest = MAX(city->highest, currHeight);
-        //city->lowest = MIN(city->lowest, currHeight);
 
         // draw city wall when there is a height difference
         if(currHeight > *lastHeight) {
@@ -325,7 +324,7 @@ void *attack_t(void* param) {
         for(int i = 0; i < maxMissles; i++) {
             pthread_create(&missleThreads[i], NULL, missle_t, NULL);
             // spread out the missle creation
-            usleep(rand() % MISSLE_SPEED * 1000);
+            if(attack) usleep(rand() % MISSLE_SPEED * 1000);
         }
         for(int i = 0; i < maxMissles; i++) {
             pthread_join(missleThreads[i], NULL);

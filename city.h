@@ -26,7 +26,7 @@
 #define MISSLE_SPEED 500 /// the speed the missles drop at
 #define PLATFORM_SPEED 20 /// the speed the platform moves at
 
-#define MAX_MISSLES 10 /// max amount of missle threads spawned by attack()
+#define MAX_MISSLES 8 /// max amount of missle threads spawned by attack()
 
 /// city file disciptors
 #define UNLIMITED_MISSLES 0 /// flag for an infinte missle battle
