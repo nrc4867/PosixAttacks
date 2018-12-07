@@ -54,6 +54,20 @@ static pthread_mutex_t ATTACKING_ML = PTHREAD_MUTEX_INITIALIZER;
 #define MIN(x, y) ((x) > (y))?(y):(x)
 
 /**
+ * start_curses()
+ *      starts curses
+ */
+static void start_curses() {
+    initscr();
+    noecho();
+    nodelay(stdscr, true);
+    cbreak();
+    width = getmaxx(stdscr);
+    height = getmaxy(stdscr);
+}
+
+
+/**
  * is_digit()
  *      checks to ensure that a c string is a base 10 digit
  * args - 
@@ -163,13 +177,8 @@ static void read_uncommented(char** buffer, size_t* len, FILE* stream) {
  *      see city.h 
  *      city global variable created and set by function
  */
-unsigned int init_city(FILE *cityFile, 
-                            int screenWidth, int screenHeight) {
+unsigned int init_city(FILE *cityFile) {
     assert(cityFile != NULL);
-    assert(screenWidth > 0 && screenHeight > 0);
- 
-    width = screenWidth;
-    height = screenHeight;
 
     city = (City)malloc(sizeof(struct CITY));
     assert(city != NULL);
@@ -182,6 +191,7 @@ unsigned int init_city(FILE *cityFile,
     // read defender 
     read_uncommented(&buffer, &len, cityFile);
     buffer[strlen(buffer) -1] = '\0';
+    if(strlen(buffer) > 80) buffer[79] = '\0';
     if(!strlen(buffer)) {
         status = 2; // no defender
         goto cleanup;
@@ -191,6 +201,7 @@ unsigned int init_city(FILE *cityFile,
     // read attacker
     read_uncommented(&buffer, &len, cityFile);
     buffer[strlen(buffer) -1] = '\0';
+    if(strlen(buffer) > 80) buffer[79] = '\0';
     if(!strlen(buffer)) {
         status = 3; // no attacker
         goto cleanup;
@@ -215,7 +226,9 @@ unsigned int init_city(FILE *cityFile,
         status = 5; // no city
         goto cleanup;
     }
- 
+    
+    start_curses(); 
+
     // Begin drawing the city by reading the file line by line
     int offset = 0;
     unsigned long lastHeight = temp;
@@ -223,7 +236,7 @@ unsigned int init_city(FILE *cityFile,
         draw_city(buffer, &offset, &lastHeight);
         read_uncommented(&buffer, &len, cityFile);
     } while(strcspn(buffer, "\n") > 0);
-   
+ 
     do { // fill in the remaining area of the screen
         mvprintw(height - ASSUME_FLOOR, offset, "%c", FLOOR_C);
         refresh();
@@ -269,8 +282,10 @@ static void *missile_t(void* param) {
         pthread_mutex_lock(&DRAWING_ML);
         
         char ch = mvinch(missile.row, missile.column) & A_CHARTEXT;
-        if(ch == HIT_C) // another missile has just exploded here
+        if(ch == HIT_C) { // another missile has just exploded here
+            mvprintw(missile.row, missile.column, " ");
             break;
+        }
 
         // remove the old position of the missile from the display
         mvprintw(missile.row++, missile.column, " ");

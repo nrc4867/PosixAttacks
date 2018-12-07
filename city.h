@@ -37,12 +37,8 @@
  * init_city()
  *      create and draw the city to ncurses 
  *      init_city does not call refresh
- * pre - 
- *      ncurses has been initialized
  * args - 
  *      city - pointer to a city description file
- *      screenWidth - the terminal width as determined by ncurses (> 0)
- *      screenHeight - the terminal height as determined by ncurses (> 0)
  * returns - 
  *      0 - the city has been successfully drawn
  *      1 - the city descriptor file cannot be read
@@ -51,9 +47,10 @@
  *      4 - missing missile count
  *      5 - missing city layout
  * post -
+ *      ncurses will be initialized
  *      the city has been drawn and is waiting on refresh by ncurses
  */
-unsigned int init_city(FILE *city, int screenWidth, int screenHeight);
+unsigned int init_city(FILE *city);
 
 /**
  * destroy_city()

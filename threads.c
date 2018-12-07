@@ -65,7 +65,7 @@ void city_fail(int id) {
         "missing defender name",
         "missing attacker name",
         "missing missile specification",
-        "missing city layout"
+        "missing city layout",
     };
     fprintf(stderr, "Error: %s.\n", errors[id % 6]);
    
@@ -89,17 +89,8 @@ int main(int argc, char* argv[]) {
         usage(argv[0]);
     } 
    
-    initscr(); // initialize curses
-    noecho();
-    nodelay(stdscr, true); // turn off getch pausing for defense thread
-    cbreak();
-    
+    city_fail(init_city(f)); // initialize city
 
-    int width = getmaxx(stdscr);
-    int height = getmaxy(stdscr);
-
-    city_fail(init_city(f, width, height)); // initialize city
-    
     signal(INTERRUPT, interrupt_h);
 
     fclose(f);
